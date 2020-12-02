@@ -1,0 +1,110 @@
+service: faultline
+frameworkVersion: '2'
+provider:
+  name: aws
+  runtime: go1.x
+  stage: dev
+  region: ap-northeast-1
+
+# you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+      Resource: arn:aws:dynamodb:ap-northeast-1:000796434707:table/faultline
+
+    - Effect: "Allow"
+      Action:
+        - "sqs:GetQueueAttributes"
+        - "sqs:GetQueueUrl"
+        - "sqs:ListDeadLetterSourceQueues"
+        - "sqs:ListQueues"
+        - "sqs:ListQueueTags"
+      Resource: arn:aws:sqs:ap-northeast-1:000796434707:faultline
+      
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
+functions:
+  putErrorLog:
+    handler: bin/putErrorLog
+    events:
+      - sqs: arn:aws:sqs:ap-northeast-1:000796434707:faultline
+
+resources:
+  Resources:
+    errorLogQueue:
+      Type: AWS::SQS::Queue
+      Properties: 
+        # ContentBasedDeduplication: true
+        # DelaySeconds: Integer
+        # FifoQueue: Boolean
+        # KmsDataKeyReusePeriodSeconds: Integer
+        # KmsMasterKeyId: String
+        # MaximumMessageSize: Integer
+        # MessageRetentionPeriod: Integer
+        QueueName: faultline
+        # ReceiveMessageWaitTimeSeconds: Integer
+        # RedrivePolicy: Json
+        # Tags: 
+        #   - 
+        # VisibilityTimeout: Integer
+
+    errorLogTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - 
+            AttributeName: "project"
+            AttributeType: "S"
+          -  
+            AttributeName: "message"
+            AttributeType: "S"
+          - 
+            AttributeName: "status"
+            AttributeType: "S"
+        # BillingMode: String
+        # ContributorInsightsSpecification: 
+          # ContributorInsightsSpecification
+        # GlobalSecondaryIndexes: 
+          # - GlobalSecondaryIndex
+        KeySchema: 
+          - 
+            AttributeName: "project"
+            KeyType: "HASH"
+          - 
+            AttributeName: "message"
+            KeyType: "RANGE"
+        LocalSecondaryIndexes: 
+          -  
+            IndexName: project-status
+            KeySchema: 
+              - 
+                AttributeName: "project"
+                KeyType: "HASH"
+              -
+                AttributeName: "status"
+                KeyType: "RANGE"
+            Projection: 
+              # NonKeyAttributes: 
+              #   - string
+              # 参考: https://qiita.com/yShig/items/177ea3395a819aa3e780
+              ProjectionType: ALL
+        # PointInTimeRecoverySpecification: 
+          # PointInTimeRecoverySpecification
+        ProvisionedThroughput: 
+          ReadCapacityUnits: "5"
+          WriteCapacityUnits: "5"
+        # SSESpecification: 
+          # SSESpecification
+        # StreamSpecification: 
+          # StreamSpecification
+        TableName: "faultline"
+        # Tags: 
+          # - Tag
+        # TimeToLiveSpecification: 
+          # TimeToLiveSpecification
+# configValidationMode: error
